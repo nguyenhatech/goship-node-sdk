@@ -1,6 +1,8 @@
 'use strict'
 import axios from 'axios'
-import ValidateShipment from './ValidateShipment'
+import ValidateShipment from './Validates/ValidateShipment'
+import ValidateAuth from './Validates/ValidateAuth'
+import ValidateRate from './Validates/ValidateRate'
 /**
  * define default option for class
  * @type {json}
@@ -141,13 +143,15 @@ class Goship {
    * @return {promise}
    */
   getToken () {
-    return this.api(this.generateLoginUrl(), 'POST', this.auth, {params: {id: 1}})
-    .then(function (response) {
-      return response.data
-    })
-    .catch(function (error) {
-      return error.response.data
-    })
+    if (ValidateAuth.valid(this.auth)) {
+      return this.api(this.generateLoginUrl(), 'POST', this.auth, {params: {id: 1}})
+      .then(function (response) {
+        return response.data
+      })
+      .catch(function (error) {
+        return error.response.data
+      })
+    }
   }
   /**
    * get rates
@@ -155,13 +159,15 @@ class Goship {
    * @return {promise}
    */
   getRates (params) {
-    return this.api('shipment/rates', 'POST', params)
-    .then(function (response) {
-      return response.data
-    })
-    .catch(function (error) {
-      return error.response.data
-    })
+    if (ValidateRate.valid(params)) {
+      return this.api('shipment/rates', 'POST', {shipment: params})
+      .then(function (response) {
+        return response.data
+      })
+      .catch(function (error) {
+        return error.response.data
+      })
+    }
   }
   /**
    * create shipment
