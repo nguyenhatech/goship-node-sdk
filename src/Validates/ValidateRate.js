@@ -1,5 +1,6 @@
 import {compareArray, isNumeric} from '../Helpers'
 import ValidateParcel from './ValidateParcel'
+import ValidateAddress from './ValidateAddress'
 function ValidateRateException (message) {
   this.message = message
   this.name = "Validate rate exception"
@@ -32,31 +33,9 @@ class ValidateRate {
     if (!checkRate.status) {
       throw new ValidateRateException(`Missing ${checkRate.value}`)
     } else {
-      let checkAddressFrom = compareArray(Object.keys(this.defaultRate.address_from), Object.keys(rate.address_from))
-      let checkAddressTo = compareArray(Object.keys(this.defaultRate.address_to), Object.keys(rate.address_to))
-
-      if (!checkAddressFrom.status) {
-        throw new ValidateRateException(`Missing address_from.${checkAddressFrom.value}`)
-      } else {
-        for (const key of Object.keys(rate.address_from)) {
-          if (this.defaultRate.address_from.hasOwnProperty(key)) {
-            if (rate.address_from[key] === null || rate.address_from[key] === '') throw new ValidateRateException(`Value of address_from.${key} can't empty`)
-            if (!isNumeric(rate.address_from[key])) throw new ValidateRateException(`Value of address_from.${key} invalid`)
-          }
-        }
-      }
-
-      if (!checkAddressTo.status) {
-        throw new ValidateRateException(`Missing address_from.${checkAddressTo.value}`)
-      } else {
-        for (const key of Object.keys(rate.address_to)) {
-          if (this.defaultRate.address_to.hasOwnProperty(key)) {
-            if (rate.address_to[key] === null || rate.address_to[key] === '') throw new ValidateRateException(`Value of address_to.${key} can't empty`)
-            if (!isNumeric(rate.address_to[key])) throw new ValidateRateException(`Value of address_to.${key} invalid`)
-          }
-        }
-      }
       try {
+        ValidateAddress.valid(rate.address_from)
+        ValidateAddress.valid(rate.address_to)
         ValidateParcel.valid(rate.parcel)
       } catch(e) {
         throw new ValidateRateException(e.message)

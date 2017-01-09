@@ -73,6 +73,19 @@ class Goship {
     return 'Bearer ' + token
   }
   /**
+   * get base url
+   * @return {string} base url
+   */
+  generateBaseUrl () {
+    if (this.workspace === 'sandbox') {
+      return `https://sandbox.goship.io/api/`
+    } else if (this.workspace === 'dev') {
+      return `http://goship.dev/api/`
+    } else {
+      return `https://api.goship.io/api/`
+    }
+  }
+  /**
    * config request for axios
    * @param  {json} configs
    * @return {json}         axios config
@@ -82,15 +95,8 @@ class Goship {
       headers: {Accept: 'application/json'},
       params: {},
       timeout: 1000,
-      proxy: this.proxy
-    }
-
-    if (this.workspace === 'sandbox') {
-      defaultConfig.baseURL = `https://sandbox.goship.io/api/ext_${this.version}/`
-    } else if (this.workspace === 'dev') {
-      defaultConfig.baseURL = `http://goship.dev/api/ext_${this.version}/`
-    } else {
-      defaultConfig.baseURL = `https://api.goship.io/api/ext_${this.version}/`
+      proxy: this.proxy,
+      baseURL: `${this.generateBaseUrl()}ext_${this.version}/`
     }
 
     return Object.assign(defaultConfig, configs)
@@ -100,13 +106,7 @@ class Goship {
    * @return {string} login url
    */
   generateLoginUrl () {
-    if (this.workspace === 'sandbox') {
-      return `https://sandbox.goship.io/api/${this.version}/login`
-    } else if (this.workspace === 'dev') {
-      return `http://goship.dev/api/${this.version}/login`
-    } else {
-      return `https://api.goship.io/api/${this.version}/login`
-    }
+      return `${this.generateBaseUrl()}${this.version}/login`
   }
   /**
    * excute http request
@@ -160,22 +160,43 @@ class Goship {
    */
   getRates (params) {
     if (ValidateRate.valid(params)) {
-      return this.api('shipment/rates', 'POST', {shipment: params})
-      .then(function (response) {
-        return response.data
-      })
-      .catch(function (error) {
-        return error.response.data
-      })
+      this.shipment = params
+      if (!this.options.access_token) {
+        return this.getToken().then(response => {
+          if (response.code === 200) {
+            this.access_token = response.access_token
+            return this._sendGetRateRequest(params)
+          } else {
+            return {message: 'Authentication fail'}
+          }
+          return response
+        })
+      } else {
+        return this._sendGetRateRequest(params)
+      }
     }
+  }
+  /**
+   * create shipment with rate
+   * @param  {json} rate
+   * @param  {boolean} sentCarrier
+   * @return {promise}
+   */
+  createShipmentWithRate (rate, sentCarrier) {
+    this.shipment.rate = rate.id
+    return this.createShipment(this.shipment, sentCarrier)
   }
   /**
    * create shipment
    * @param  {json} shipment
+   * @param  {boolean} sentCarrier
    * @return {promise}
    */
-  createShipment (shipment) {
-    if (ValidateShipment.valid(shipment)) {
+  createShipment (shipment, sentCarrier) {
+    if (sentCarrier) {
+      shipment.auto_send = 1
+    }
+    if (ValidateRate.valid(shipment)) {
       if (!this.options.access_token) {
         return this.getToken().then(response => {
           if (response.code === 200) {
@@ -230,6 +251,20 @@ class Goship {
     } else {
       return this._sendTrackShipmentResquest(id)
     }
+  }
+  /**
+   * send get rate request
+   * @param  {json} data
+   * @return {promise}
+   */
+  _sendGetRateRequest (data) {
+    return this.api('shipment/rates', 'POST', {shipment: data})
+    .then(function (response) {
+      return response.data
+    })
+    .catch(function (error) {
+      return error.response.data
+    })
   }
   /**
    * send create shipment request
